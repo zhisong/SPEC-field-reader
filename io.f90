@@ -1,6 +1,14 @@
 ! the module reads the hdf5 file
 module io
 
+private
+
+  interface read_h5_data
+    module procedure read_h5_int, read_h5_int_array, read_h5_real_array_2d
+  end interface read_h5_data
+
+public :: read_spec_h5, read_spec_field
+
 contains
   subroutine read_spec_h5(filename, sstate)
   ! read the SPEC hdf5 output
@@ -23,16 +31,37 @@ contains
     call h5fopen_f(TRIM(filename), H5F_ACC_RDONLY_F, file_id, hdferr)
     call check(hdferr)
 
-    call read_h5_int(file_id, 'Igeometry', sstate%Igeometry)
-    call read_h5_int(file_id, 'Istellsym', sstate%Istellsym)
-    call read_h5_int(file_id, 'Lfreebound', sstate%Lfreebound)
-    call read_h5_int(file_id, 'Nvol', sstate%Nvol)
-    call read_h5_int(file_id, 'Nfp', sstate%Nfp)
-    call read_h5_int(file_id, 'Mpol', sstate%Mpol)
-    call read_h5_int(file_id, 'Ntor', sstate%Ntor)
+    call read_h5_data(file_id, 'Igeometry', sstate%Igeometry)
+    call read_h5_data(file_id, 'Istellsym', sstate%Istellsym)
+    call read_h5_data(file_id, 'Lfreebound', sstate%Lfreebound)
+    call read_h5_data(file_id, 'Nvol', sstate%Nvol)
+    call read_h5_data(file_id, 'Mvol', sstate%Mvol)
+    call read_h5_data(file_id, 'Nfp', sstate%Nfp)
+    call read_h5_data(file_id, 'Mpol', sstate%Mpol)
+    call read_h5_data(file_id, 'Ntor', sstate%Ntor)
+    call read_h5_data(file_id, 'mn', sstate%mn)
+  
+    allocate(sstate%Lrad(sstate%Mvol))
+    call read_h5_data(file_id, 'Lrad', sstate%Lrad, sstate%Mvol)
 
-    allocate(sstate%Lrad(sstate%Nvol))
-    call read_h5_int_array(file_id, 'Lrad', sstate%Lrad, sstate%Nvol)
+    sstate%Ri%nfp = sstate%Nfp
+    sstate%Ri%mvol = sstate%Mvol
+    sstate%Ri%icoordinatesingularity = sstate%Igeometry== 2 .or. sstate%Igeometry==3
+    sstate%Ri%isym = sstate%Istellsym == 1
+    sstate%Ri%mn = sstate%mn
+    allocate(sstate%Ri%im(sstate%mn))
+    call read_h5_data(file_id, 'im', sstate%Ri%im, sstate%mn)
+    allocate(sstate%Ri%in(sstate%mn))
+    call read_h5_data(file_id, 'in', sstate%Ri%in, sstate%mn)
+
+    allocate(sstate%Ri%Rbc(sstate%mn, 0:sstate%Mvol))
+    allocate(sstate%Ri%Rbs(sstate%mn, 0:sstate%Mvol))
+    allocate(sstate%Ri%Zbc(sstate%mn, 0:sstate%Mvol))
+    allocate(sstate%Ri%Zbs(sstate%mn, 0:sstate%Mvol))
+    call read_h5_data(file_id, 'Rbc', sstate%Ri%Rbc, (/sstate%mn, sstate%Mvol+1/))
+    call read_h5_data(file_id, 'Rbs', sstate%Ri%Rbs, (/sstate%mn, sstate%Mvol+1/))
+    call read_h5_data(file_id, 'Zbc', sstate%Ri%Zbc, (/sstate%mn, sstate%Mvol+1/))
+    call read_h5_data(file_id, 'Zbc', sstate%Ri%Zbs, (/sstate%mn, sstate%Mvol+1/))
 
     call h5fclose_f(file_id, hdferr) 
 
@@ -58,7 +87,7 @@ contains
 
     read(aunit) Mvol, Mpol, Ntor, mn, Nfp
 
-    if (sstate%Nvol .ne. Mvol) stop "please check consistency between .h5 and .A files"
+    if (sstate%Mvol .ne. Mvol) stop "please check consistency between .h5 and .A files"
     if (sstate%Mpol .ne. Mpol) stop "please check consistency between .h5 and .A files"
     if (sstate%Ntor .ne. Ntor) stop "please check consistency between .h5 and .A files"
     if (sstate%Nfp .ne. Nfp) stop "please check consistency between .h5 and .A files"
@@ -110,6 +139,8 @@ contains
     close(aunit)
   end subroutine read_spec_field
 
+!******* internal subroutines **********
+
   subroutine read_h5_int(file_id, name, data)
     use hdf5
     implicit none
@@ -152,10 +183,29 @@ contains
     data(:) = data_out(:)
   end subroutine read_h5_int_array
 
+subroutine read_h5_real_array_2d(file_id, name, data, nsize)
+    use hdf5
+    implicit none
+    integer(HID_T), intent(in) :: file_id
+    character(LEN=*), intent(in) :: name
+    real, dimension(:,:), intent(out) ::  data
+    integer, dimension(2),intent(in) :: nsize
+
+    integer(HID_T) :: dset_id
+    integer :: hdferr
+    integer(HSIZE_T), dimension(2) :: len
+
+    if (PRODUCT(nsize) .ne. SIZE(data)) stop 'internal consistency when reading data'
+    len(:) = nsize(:)
+    call h5dopen_f(file_id, name, dset_id, hdferr)
+    call check(hdferr)
+    call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, data, len, hdferr)
+    call check(hdferr)
+  end subroutine read_h5_real_array_2d
+
   subroutine check(ierr)
     implicit none
     integer, intent(in) :: ierr
     if (ierr.ne.0) stop "hdf5 error!"
   end subroutine
-
 end module io

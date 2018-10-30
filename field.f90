@@ -26,6 +26,8 @@ contains
     if (ALLOCATED(f%Ato)) deallocate(f%Ato)
     if (ALLOCATED(f%Aze)) deallocate(f%Aze)
     if (ALLOCATED(f%Azo)) deallocate(f%Azo)
+    if (ALLOCATED(f%im)) deallocate(f%im)
+    if (ALLOCATED(f%im)) deallocate(f%in)
   end subroutine destroy_field
 
 end module field
