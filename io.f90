@@ -1,4 +1,4 @@
-! the module reads the hdf5 file
+! the module reads the SPEC output files
 module io
 
 private
@@ -115,6 +115,12 @@ contains
         sstate%A(vvol)%isym = .true.
       else
         sstate%A(vvol)%isym = .false.
+      end if
+
+      if (sstate%Ri%icoordinatesingularity .and. vvol.eq.1) then
+        sstate%A(vvol)%isingular = .true.
+      else
+        sstate%A(vvol)%isingular = .false.
       end if
 
       allocate(sstate%A(vvol)%Ate(0:Lrad, mn))

@@ -1,4 +1,4 @@
-! this module defines the data structure of geometry
+! this module defines the data structure of geometry and the calculation of gij/dgij
 module geometry
 
   type, public :: volume
