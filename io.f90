@@ -47,6 +47,7 @@ contains
     sstate%Ri%nfp = sstate%Nfp
     sstate%Ri%mvol = sstate%Mvol
     sstate%Ri%icoordinatesingularity = sstate%Igeometry== 2 .or. sstate%Igeometry==3
+    sstate%Ri%igeometry = sstate%Igeometry
     sstate%Ri%isym = sstate%Istellsym == 1
     sstate%Ri%mn = sstate%mn
     allocate(sstate%Ri%im(sstate%mn))
