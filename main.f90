@@ -6,6 +6,8 @@ program SPEC_field_reader
 
   type(state) :: ss
   integer :: lrad
+  integer :: lvol
+  real :: s, theta, xi
   real :: a(3), gb(3)
   real :: jac, x(3), gij(3,3), dgij(3,3,3)
 
@@ -13,8 +15,13 @@ program SPEC_field_reader
   call read_spec_field('.G3V02L1Fi.001.sp.A',ss)
   
   lrad = ss%lrad(2)
-  call get_spec_field(ss%A(2), lrad, -0.3, 0.7, 2.3, a, gb)
-  call get_spec_coord(ss%Ri, 2, ss%mn, -0.3, 0.7, 2.3, jac, x, gij, dgij)
+
+  lvol = 2 ! in volume 2
+  s = -0.3
+  theta = 0.7
+  xi = 2.3
+  call get_spec_field(ss%A(lvol), ss%lrad(lvol), s, theta, xi, a, gb)
+  call get_spec_coord(ss%Ri, lvol, ss%mn, s, theta, xi, jac, x, gij, dgij)
   
   write(*,*) jac
   write(*,*) x
