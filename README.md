@@ -1,10 +1,13 @@
 # SPEC-field-reader
 This repository contains FORTRAN modules that reads the SPEC input and computes the magnetic field and metrics.
+
 Note: the code is only tested in stellarator symmetric cases currently.
 
 ### SPEC geometry and field
 Please see the following two links for references.
+
 For magnetic field representation: [matrix.pdf](https://w3.pppl.gov/~shudson/Spec/matrix.pdf)
+
 For geometry representation: [coords.pdf](https://w3.pppl.gov/~shudson/Spec/coords.pdf)
 
 ### Usage
