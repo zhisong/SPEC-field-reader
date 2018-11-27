@@ -1,7 +1,7 @@
 ! this module defines the state of a SPEC run
 module spec_state
-  use field, only : Afield
-  use geometry, only : volume
+  use spec_field, only : Afield
+  use spec_geometry, only : volume
 
   type, public :: state
 
@@ -24,9 +24,9 @@ module spec_state
 
 contains
 
-  subroutine destroy_state(ss)
-    use field, only : destroy_field
-    use geometry, only : destroy_volume
+  subroutine destroy_spec_state(ss)
+    use spec_field, only : destroy_field
+    use spec_geometry, only : destroy_volume
     implicit none
     type(state) :: ss
     integer :: i1
@@ -40,6 +40,6 @@ contains
 
     call destroy_volume(ss%Ri)
 
-  end subroutine destroy_state
+  end subroutine destroy_spec_state
 
 end module

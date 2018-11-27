@@ -1,5 +1,5 @@
 ! the module reads the SPEC output files
-module io
+module spec_io
 
 private
 
@@ -50,6 +50,8 @@ contains
     sstate%Ri%igeometry = sstate%Igeometry
     sstate%Ri%isym = sstate%Istellsym == 1
     sstate%Ri%mn = sstate%mn
+    sstate%Ri%mpol = sstate%Mpol
+    sstate%Ri%ntor = sstate%Ntor
     allocate(sstate%Ri%im(sstate%mn))
     call read_h5_data(file_id, 'im', sstate%Ri%im, sstate%mn)
     allocate(sstate%Ri%in(sstate%mn))
@@ -62,7 +64,7 @@ contains
     call read_h5_data(file_id, 'Rbc', sstate%Ri%Rbc, (/sstate%mn, sstate%Mvol+1/))
     call read_h5_data(file_id, 'Rbs', sstate%Ri%Rbs, (/sstate%mn, sstate%Mvol+1/))
     call read_h5_data(file_id, 'Zbc', sstate%Ri%Zbc, (/sstate%mn, sstate%Mvol+1/))
-    call read_h5_data(file_id, 'Zbc', sstate%Ri%Zbs, (/sstate%mn, sstate%Mvol+1/))
+    call read_h5_data(file_id, 'Zbs', sstate%Ri%Zbs, (/sstate%mn, sstate%Mvol+1/))
 
     call h5fclose_f(file_id, hdferr) 
 
@@ -215,4 +217,4 @@ subroutine read_h5_real_array_2d(file_id, name, data, nsize)
     integer, intent(in) :: ierr
     if (ierr.ne.0) stop "hdf5 error!"
   end subroutine
-end module io
+end module spec_io

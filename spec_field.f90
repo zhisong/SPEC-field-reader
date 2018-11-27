@@ -1,5 +1,5 @@
 ! this module defines the data structure of A and the subroutine that obtains the field
-module field
+module spec_field
 
   type, public :: Afield
 
@@ -13,7 +13,7 @@ module field
   !type(Afield), dimension(:), allocatable :: A
 
 contains
-  subroutine get_field(af, lrad, s, theta, xi, a, gb)
+  subroutine get_spec_field(af, lrad, s, theta, xi, a, gb)
   ! Get the magnetic vector potential and/or magnetic field
   ! INPUTS:
   ! af     - TYPE(Afield), the object contains the field information
@@ -84,7 +84,7 @@ contains
       end if ! if Lcoordinatesingularity == .true.
     end do
 
-  end subroutine get_field
+  end subroutine get_spec_field
 
   subroutine destroy_field(f)
     implicit none
@@ -98,4 +98,4 @@ contains
     if (ALLOCATED(f%im)) deallocate(f%in)
   end subroutine destroy_field
 
-end module field
+end module spec_field
