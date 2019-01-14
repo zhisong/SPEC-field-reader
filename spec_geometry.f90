@@ -13,23 +13,22 @@ module spec_geometry
 
 contains
 
-  subroutine get_spec_coord(v, lvol, mn, s, theta, xi, jac, x, gij, dgij)
+  subroutine get_spec_coord(v, lvol, s, theta, xi, jac, x, gij, dgij)
   ! Obtain the coordinate quantities
   ! INPUTS:
   ! v     - TYPE(volume), the volume object read from file
   ! lvol  - INTEGER, which volume we are looking at,
-  ! mn    - number of harmonics
   ! s     - s coordinate
   ! theta - theta coordinate
   ! xi    - xi coordinate
   ! RETURNS:
   ! jac   - REAL, Jacobian
-  ! x     - REAL(3), the coordinates (x, y, z)
+  ! x     - REAL(3), the coordinates (R, Z, phi)
   ! gij   - REAL(3,3), metric tensor with lower indices
   ! dgij  - REAL(3,3,3), the derivative of gij with respect to (s, theta, xi)
     implicit none
     type(volume) :: v
-    integer, intent(in) :: lvol, mn
+    integer, intent(in) :: lvol
     real, intent(in) :: s, theta, xi
 
     real, intent(out) :: jac
@@ -39,9 +38,12 @@ contains
 
     real :: Rij(0:3,0:3), Zij(0:3,0:3)
     real :: sbar, alss, blss
-    real, dimension(mn) :: alphai, cosai, sinai
-    real, dimension(mn) :: t1, t2, t3, t4, ddt1, ddt3, fj, dfj, ddfj
+    real, dimension(v%mn) :: alphai, cosai, sinai
+    real, dimension(v%mn) :: t1, t2, t3, t4, ddt1, ddt3, fj, dfj, ddfj
     integer :: ii, jj, kk
+    integer :: mn
+
+    mn = v%mn
 
     Rij(:,:) = 0
     Zij(:,:) = 0

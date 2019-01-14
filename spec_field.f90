@@ -13,11 +13,10 @@ module spec_field
   !type(Afield), dimension(:), allocatable :: A
 
 contains
-  subroutine get_spec_field(af, lrad, s, theta, xi, a, gb)
+  subroutine get_spec_field(af, s, theta, xi, a, gb)
   ! Get the magnetic vector potential and/or magnetic field
   ! INPUTS:
   ! af     - TYPE(Afield), the object contains the field information
-  ! lrad   - interger, the order of Chebyshev polynomials
   ! s      - REAL, the s coordinate
   ! theta  - REAL, the theta coordinate
   ! xi     - REAL, the xi coordinate
@@ -33,11 +32,13 @@ contains
     real, dimension(3), intent(out) :: a
     real, dimension(3), intent(out) :: gb
 
-    real, dimension(0:lrad) :: T, dT, Tbar, dTbar
-    real, dimension(0:lrad) :: work
+    real, dimension(0:af%lrad) :: T, dT, Tbar, dTbar
+    real, dimension(0:af%lrad) :: work
+
     integer :: ii, lrad, mn
     real :: alphai, sinai, cosai, sbar, sbarmi
 
+    lrad = af%lrad
     mn = af%mn     ! shorthand
 
     gb(:) = 0

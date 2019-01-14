@@ -20,8 +20,10 @@ program SPEC_field_reader
   s = -0.3
   theta = 0.7
   xi = 2.3
-  call get_spec_field(ss%A(lvol), ss%lrad(lvol), s, theta, xi, a, gb)
-  call get_spec_coord(ss%Ri, lvol, ss%mn, s, theta, xi, jac, x, gij, dgij)
+  call get_spec_field(ss%A(lvol), s, theta, xi, a, gb)
+  call get_spec_coord(ss%Ri, lvol, s, theta, xi, jac, x, gij, dgij)
+  ! need jac for each
+  ! J_down or deriv of B
   
   write(*,*) jac
   write(*,*) x

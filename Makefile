@@ -13,7 +13,7 @@ LIB+=$(HDF5link)
 TARGET=./spec_field_reader.exe
 
 # the source files
-OBJS=cheby.o geometry.o field.o spec_state.o io.o main.o
+OBJS=cheby.o spec_geometry.o spec_field.o spec_state.o spec_io.o main.o
 
 
 all :	$(OBJS)
