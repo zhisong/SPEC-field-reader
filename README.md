@@ -40,7 +40,7 @@ xi =  2.3
 call get_spec_field(ss%A(lvol), ss%lrad(lvol), s, theta, xi, a, gb, dgb)
 call get_spec_coord(ss%Ri, lvol, ss%mn, s, theta, xi, jac, djac, x, gij, dgij)
 ```
-Please note that the output "gb" has three components, and it is actually $J B^i$, with "dgb" its derivatives. The output "a" is actually $A_i$. The output "jac" is the Jacobian $J$, "djac" is its derivatives, "x" is the Cartesian $(x,y,z)$, and the metric tensors "gij" are actually $g_{ij}$. Finally, "dgij(i,j,k)" is the partial derivatives of gij, i.e. $\partial_{x^k} g_{ij}$, where $(x^1, x^2, x^3) = (s, \theta, \xi)$.
+Please note that the output "gb" has three components, and it is actually $J B^i$, with "dgb" its derivatives. The output "a" is actually $A_i$. The output "jac" is the Jacobian $J$, "djac" is its derivatives, "x" is the coordinates, and the metric tensors "gij" are actually $g_{ij}$. Finally, "dgij(i,j,k)" is the partial derivatives of gij, i.e. $\partial_{x^k} g_{ij}$, where $(x^1, x^2, x^3) = (s, \theta, \xi)$.
 
 The test example "G3V02L1Fi.001" is an elliptic stellarator case (fixed-boundary), one of the standard test cases of SPEC. The case has two inner volumes. The outside boundary of the plasma is shown in the figure below, while the Poincare cross section at $0, \frac{\pi}{10}, \frac{2\pi}{10}, \frac{3\pi}{10}$. 
 
