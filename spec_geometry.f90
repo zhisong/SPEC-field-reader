@@ -13,7 +13,7 @@ module spec_geometry
 
 contains
 
-  subroutine get_spec_coord(v, lvol, s, theta, xi, jac, x, gij, dgij)
+  subroutine get_spec_coord(v, lvol, s, theta, xi, jac, djac, x, gij, dgij)
   ! Obtain the coordinate quantities
   ! INPUTS:
   ! v     - TYPE(volume), the volume object read from file
@@ -23,7 +23,10 @@ contains
   ! xi    - xi coordinate
   ! RETURNS:
   ! jac   - REAL, Jacobian
-  ! x     - REAL(3), the coordinates (R, Z, phi)
+  ! djac  - REAL(3), the derivative of Jacobian with respect (s, theta, xi)
+  ! x     - REAL(3), the coordinates, for Igeometry==1 (Cartisian): (x, y, z)
+  !                                       Igeometry==2 (Cylinder): (r, theta, z),
+  !                                       Igeometry==3 (Toroidal): (R, phi, Z)
   ! gij   - REAL(3,3), metric tensor with lower indices
   ! dgij  - REAL(3,3,3), the derivative of gij with respect to (s, theta, xi)
   !                      first and second indices: i,j; third index: derivative
@@ -34,7 +37,7 @@ contains
     real, intent(in) :: s, theta, xi
 
     real, intent(out) :: jac
-    real, dimension(3), intent(out) :: x
+    real, dimension(3), intent(out) :: x, djac
     real, dimension(3,3), intent(out) :: gij
     real, dimension(3,3,3), intent(out) :: dgij
 
@@ -142,8 +145,8 @@ contains
     elseif (v%igeometry == 2) then ! Cylindrical
 
       jac = Rij(0,0) * Rij(0,1)
-      x(1) = Rij(0,0) * COS(theta)
-      x(2) = Rij(0,0) * SIN(theta)
+      x(1) = Rij(0,0)
+      x(2) = theta
       x(3) = xi
 
       do ii = 1, 3
@@ -216,8 +219,8 @@ contains
       Zij(3,2) = Zij(2,3)
 
       jac = Rij(0,0) * (Zij(0,1)*Rij(0,2) - Rij(0,1)*Zij(0,2))
-      x(1) = Rij(0,0) * COS(xi)
-      x(2) = Rij(0,0) * SIN(xi)
+      x(1) = Rij(0,0)
+      x(2) = xi
       x(3) = Zij(0,0)
 
       do ii = 1, 3
