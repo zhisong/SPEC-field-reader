@@ -131,10 +131,25 @@ contains
       dgb(1,3) = dgb(1,3) + in * (im * sumTbarAze &
                                       +  in * sumTbarAte) * cosai
       dgb(2,3) = dgb(2,3) - in * sumdTbarAze * sinai
-      dgb(3,3) = dgb(3,3) + in * sumdTbarAte * sinai 
-    end do
+      dgb(3,3) = dgb(3,3) + in * sumdTbarAte * sinai
 
-      
+      if (.not. af%isym) then
+        dgb(1,1) = dgb(1,1) + (im * sumdTbarAzo &
+                            +  in * sumdTbarAto) * cosai
+        dgb(2,1) = dgb(2,1) - sumddTbarAzo * sinai
+        dgb(3,1) = dgb(3,1) + sumddTbarAto * sinai
+
+        dgb(1,2) = dgb(1,2) - im * (im * sumTbarAzo &
+                                 +  in * sumTbarAto) * sinai
+        dgb(2,2) = dgb(2,2) - im * sumdTbarAzo * cosai
+        dgb(3,2) = dgb(3,2) + im * sumdTbarAto * cosai
+
+        dgb(1,3) = dgb(1,3) + in * (im * sumTbarAzo &
+                                 +  in * sumTbarAto) * sinai
+        dgb(2,3) = dgb(2,3) + in * sumdTbarAzo * cosai
+        dgb(3,3) = dgb(3,3) - in * sumdTbarAto * cosai
+      end if
+    end do
 
   end subroutine get_spec_field
 
