@@ -39,31 +39,39 @@ contains
     real, dimension(0:af%lrad) :: work
 
     integer :: ii, lrad, mn
+    real :: im, in
     real :: alphai, sinai, cosai, sbar, sbarmi
     real :: sumTbarAte, sumTbarAze, sumTbarAto, sumTbarAzo
-    real :: sumdTbarAte, sumdTbarAze, sumdTbarAto, sumdTbarAzo    
+    real :: sumdTbarAte, sumdTbarAze, sumdTbarAto, sumdTbarAzo
+    real :: sumddTbarAte, sumddTbarAze, sumddTbarAto, sumddTbarAzo  
 
     lrad = af%lrad
     mn = af%mn     ! shorthand
 
+    dgb(:,:) = 0
     gb(:) = 0
     a(:) = 0
 
-    sbar = (s + 1.0) / 2.0
     call get_cheby(lrad, s, T, dT, ddT)
 
     do ii = 1, mn
+      ! shorthand
+      im = af%im(ii)
+      in = af%in(ii)
+
       ! alphai = m * theta - n * xi
-      alphai = af%im(ii) * theta - af%in(ii) * xi
+      alphai = im * theta - in * xi
       cosai = COS(alphai)
       sinai = SIN(alphai)
-
+      
+      ! Tbar = sbar**(im / 2.0) * T for volume contains the axis
       if (af%isingular) then
-        sbarmi = sbar**(af%im(ii) / 2.0)
+        sbar = (s + 1.0) / 2.0
+        sbarmi = sbar**(im / 2.0)
         Tbar(:) = T(:) * sbarmi
-        dTbar(:) = dT(:) * sbarmi + T(:) * sbarmi / sbar * af%im(ii) / 4.0
-        ddTbar(:) = ddT(:) * sbarmi + dT(:) * sbarmi / sbar * af%im(ii) / 2.0 &
-                  + T(:) * sbarmi/sbar**2 * af%im(ii) * (af%im(ii)/2.0 - 1) / 8.0
+        dTbar(:) = dT(:) * sbarmi + T(:) * sbarmi / sbar * im / 4.0
+        ddTbar(:) = ddT(:) * sbarmi + dT(:) * sbarmi / sbar * im / 2.0 &
+                  + T(:) * sbarmi/sbar**2 * im * (im/2.0 - 1) / 8.0
       else
         Tbar(:) = T(:)
         dTbar(:) = dT(:)
@@ -75,15 +83,19 @@ contains
       sumTbarAze = SUM(Tbar(:) * af%Aze(:,ii))
       sumdTbarAte = SUM(dTbar(:) * af%Ate(:,ii))
       sumdTbarAze = SUM(dTbar(:) * af%Aze(:,ii))
+      sumddTbarAte = SUM(ddTbar(:) * af%Ate(:,ii))
+      sumddTbarAze = SUM(ddTbar(:) * af%Aze(:,ii))
 
       if (.not. af%isym) then
         sumTbarAto = SUM(Tbar(:) * af%Ato(:,ii))
         sumTbarAzo = SUM(Tbar(:) * af%Azo(:,ii))
         sumdTbarAto = SUM(dTbar(:) * af%Ato(:,ii))
         sumdTbarAzo = SUM(dTbar(:) * af%Azo(:,ii))
+        sumddTbarAto = SUM(ddTbar(:) * af%Ato(:,ii))
+        sumddTbarAzo = SUM(ddTbar(:) * af%Azo(:,ii))
       end if ! if not stellarator symmetric
 
-      ! now we first calculate vector potential
+      ! now we calculate vector potential
       a(2) = a(2) + sumTbarAte * cosai
       a(3) = a(3) + sumTbarAze * cosai
 
@@ -93,17 +105,33 @@ contains
       end if ! if not stellarator symmetric
    
       ! then we need to calculate the field
-      gb(1) = gb(1) - (af%im(ii) * sumTbarAze &
-                    +  af%in(ii) * sumTbarAte) * sinai
+      gb(1) = gb(1) - (im * sumTbarAze &
+                    +  in * sumTbarAte) * sinai
       gb(2) = gb(2) - sumdTbarAze * cosai
       gb(3) = gb(3) + sumdTbarAte * cosai
 
       if (.not. af%isym) then
-        gb(1) = gb(1) + (af%im(ii) * sumTbarAzo &
-                      +  af%in(ii) * sumTbarAto) * cosai
+        gb(1) = gb(1) + (im * sumTbarAzo &
+                      +  in * sumTbarAto) * cosai
         gb(2) = gb(2) - sumdTbarAzo * sinai
         gb(3) = gb(3) + sumdTbarAto * sinai
       end if ! if not stellarator symmetric
+
+      ! the derivative of the field d(gB)/d(s,theta,xi), finally
+      dgb(1,1) = dgb(1,1) - (im * sumdTbarAze &
+                          +  in * sumdTbarAte) * sinai
+      dgb(2,1) = dgb(2,1) - sumddTbarAze * cosai
+      dgb(3,1) = dgb(3,1) + sumddTbarAte * cosai
+      
+      dgb(1,2) = dgb(1,2) - im * (im * sumTbarAze &
+                                      +  in * sumTbarAte) * cosai
+      dgb(2,2) = dgb(2,2) + im * sumdTbarAze * sinai
+      dgb(3,2) = dgb(3,2) - im * sumdTbarAte * sinai 
+
+      dgb(1,3) = dgb(1,3) + in * (im * sumTbarAze &
+                                      +  in * sumTbarAte) * cosai
+      dgb(2,3) = dgb(2,3) - in * sumdTbarAze * sinai
+      dgb(3,3) = dgb(3,3) + in * sumdTbarAte * sinai 
     end do
 
       
