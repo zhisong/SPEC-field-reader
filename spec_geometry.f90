@@ -26,6 +26,8 @@ contains
   ! x     - REAL(3), the coordinates (R, Z, phi)
   ! gij   - REAL(3,3), metric tensor with lower indices
   ! dgij  - REAL(3,3,3), the derivative of gij with respect to (s, theta, xi)
+  !                      first and second indices: i,j; third index: derivative
+
     implicit none
     type(volume) :: v
     integer, intent(in) :: lvol

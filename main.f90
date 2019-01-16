@@ -8,7 +8,7 @@ program SPEC_field_reader
   integer :: lrad
   integer :: lvol
   real :: s, theta, xi
-  real :: a(3), gb(3)
+  real :: a(3), gb(3), dgb(3,3)
   real :: jac, x(3), gij(3,3), dgij(3,3,3)
 
   call read_spec_h5('G3V02L1Fi.001.sp.h5',ss)
@@ -20,7 +20,7 @@ program SPEC_field_reader
   s = -0.3
   theta = 0.7
   xi = 2.3
-  call get_spec_field(ss%A(lvol), s, theta, xi, a, gb)
+  call get_spec_field(ss%A(lvol), s, theta, xi, a, gb, dgb)
   call get_spec_coord(ss%Ri, lvol, s, theta, xi, jac, x, gij, dgij)
   ! need jac for each
   ! J_down or deriv of B
@@ -38,6 +38,7 @@ program SPEC_field_reader
     end do
     write(*,*)
   end do
+  write(*,*) gb
 
   call destroy_spec_state(ss)
 
