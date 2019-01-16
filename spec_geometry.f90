@@ -125,6 +125,7 @@ contains
 
     if (v%igeometry == 1) then ! Cartesian
       jac = Rij(0,1)
+      djac(:) = Rij(1:,1)
 
       x(1) = theta
       x(2) = xi
@@ -145,6 +146,8 @@ contains
     elseif (v%igeometry == 2) then ! Cylindrical
 
       jac = Rij(0,0) * Rij(0,1)
+      djac(:) = Rij(0,1:) * Rij(0,1) + Rij(0,0) * Rij(1:,1)
+
       x(1) = Rij(0,0)
       x(2) = theta
       x(3) = xi
@@ -219,6 +222,10 @@ contains
       Zij(3,2) = Zij(2,3)
 
       jac = Rij(0,0) * (Zij(0,1)*Rij(0,2) - Rij(0,1)*Zij(0,2))
+      djac(:) = Rij(0,1:) * (Zij(0,1)*Rij(0,2) - Rij(0,1)*Zij(0,2)) &
+              + Rij(0,0) * (Zij(1:,1)*Rij(0,2) - Rij(1:,1)*Zij(0,2)) &
+              + Rij(0,0) * (Zij(0,1)*Rij(1:,2) - Rij(0,1)*Zij(1:,2))
+
       x(1) = Rij(0,0)
       x(2) = xi
       x(3) = Zij(0,0)
