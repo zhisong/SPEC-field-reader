@@ -38,6 +38,7 @@ program SPEC_field_reader
     end do
     write(*,*)
   end do
+  write(*,*) a
   write(*,*) gb
 
   call destroy_spec_state(ss)
