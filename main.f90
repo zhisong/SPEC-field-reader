@@ -8,11 +8,14 @@ program SPEC_field_reader
   integer :: lrad
   integer :: lvol
   real :: s, theta, xi
-  real :: s2, theta2, xi2, delta
+  real :: delta
   real :: a(3), gb(3), dgb(3,3)
   real :: a2(3), gb2(3), dgb2(3,3)
-  real :: jac, djac(3), x(3), gij(3,3), dgij(3,3,3)
-  real :: jac2, djac2(3), x2(3), gij2(3,3), dgij2(3,3,3)
+  real :: jac, djac(3), x(3), gij(3,3),jacmat(3,3)
+  
+  TYPE(spec_metric), POINTER :: met
+  
+  integer :: ii,jj
 
   call read_spec_h5('G3V02L1Fi.001.sp.h5',ss)
   call read_spec_field('.G3V02L1Fi.001.sp.A',ss)
@@ -25,36 +28,43 @@ program SPEC_field_reader
   xi = 2.3
   delta = 0.00001
   call get_spec_field(ss%A(lvol), s, theta, xi, a, gb, dgb)
-  call get_spec_coord(ss%Ri, lvol, s, theta, xi, jac, djac, x, gij, dgij)
-  ! need jac for each
-  ! J_down or deriv of B
+  met=>get_spec_metric(ss%Ri, lvol, s, theta, xi)
+
+  ! save for comparison
+  jac=met%jac
+  x=met%x
+  gij=met%gij
   
   write(*,*) 'Jacobian'
-  write(*,*) jac
+  write(*,*) met%jac
   write(*,*) 'derivatives direct'
-  write(*,*) djac
+  write(*,*) met%grad_jac
+  write(*,*) 'jacobian matrix direct'
+  write(*,*) met%jacmat(1,:)
+  write(*,*) met%jacmat(2,:)
+  write(*,*) met%jacmat(3,:)
   write(*,*) 'derivatives finite difference'
-  s2 = s + delta
-  theta2 = theta
-  xi2 = xi
-  call get_spec_coord(ss%Ri, lvol, s2, theta2, xi2, jac2, djac2, x2, gij2, dgij2)
-  djac2(1) = (jac2 - jac) / delta
-  dgij2(:,:,1) = (gij2 - gij2) / delta
 
-  s2 = s 
-  theta2 = theta + delta
-  xi2 = xi
-  call get_spec_coord(ss%Ri, lvol, s2, theta2, xi2, jac2, djac2, x2, gij2, dgij2)
-  djac2(2) = (jac2 - jac) / delta
-  dgij2(:,:,2) = (gij2 - gij2) / delta
-  s2 = s 
-  theta2 = theta
-  xi2 = xi + delta
-  call get_spec_coord(ss%Ri, lvol, s2, theta2, xi2, jac2, djac2, x2, gij2, dgij2)
-  djac2(3) = (jac2 - jac) / delta
-  dgij2(:,:,3) = (gij2 - gij) / delta
+  ! s deriv
+  met=>get_spec_metric(ss%Ri, lvol, s+delta, theta, xi)
+  djac(1) = (met%jac - jac) / delta
+  jacmat(:,1) = (met%x - x)/delta
 
-  write(*,*) djac2
+  ! theta deriv
+  met=>get_spec_metric(ss%Ri, lvol, s, theta+delta, xi)
+  djac(2) = (met%jac - jac) / delta
+  jacmat(:,2) = (met%x - x)/delta
+
+  ! xi deriv
+  met=>get_spec_metric(ss%Ri, lvol, s, theta, xi+delta)
+  djac(3) = (met%jac - jac) / delta
+  jacmat(:,3) = (met%x- x)/delta
+
+  write(*,*) djac
+  write(*,*)
+  write(*,*) jacmat(1,:)
+  write(*,*) jacmat(2,:)
+  write(*,*) jacmat(3,:)
   write(*,*)
 
   write(*,*) 'x'
@@ -63,21 +73,6 @@ program SPEC_field_reader
   do ii = 1, 3
     write(*,*) gij(:,ii)
   enddo
-  write(*,*) 'dgij direct'
-  do ii = 1, 3
-    do jj = 1,3
-      write(*,*) dgij(:,jj,ii)
-    end do
-    write(*,*)
-  end do
-
-  write(*,*) 'dgij finite difference'
-  do ii = 1, 3
-    do jj = 1,3
-      write(*,*) dgij2(:,jj,ii)
-    end do
-    write(*,*)
-  end do
 
   write(*,*) 'A'
   write(*,*) a
@@ -87,10 +82,7 @@ program SPEC_field_reader
 
   ! now we verify the derivatives
   ! the s derivatives
-  s2 = s + delta
-  theta2 = theta
-  xi2 = xi
-  call get_spec_field(ss%A(lvol), s2, theta2, xi2, a2, gb2, dgb2)
+  call get_spec_field(ss%A(lvol), s+delta, theta, xi, a2, gb2, dgb2)
   dgb2(:,1) = (gb2 - gb) / delta
   write(*,*) 's derivatives of field, direct'
   write(*,*) dgb(:,1)
@@ -99,10 +91,7 @@ program SPEC_field_reader
   write(*,*)
 
   ! the theta derivatives
-  s2 = s 
-  theta2 = theta + delta
-  xi2 = xi
-  call get_spec_field(ss%A(lvol), s2, theta2, xi2, a2, gb2, dgb2)
+  call get_spec_field(ss%A(lvol), s, theta+delta, xi, a2, gb2, dgb2)
   dgb2(:,2) = (gb2 - gb) / delta
   write(*,*) 'theta derivatives of field, direct'
   write(*,*) dgb(:,2)
@@ -111,10 +100,7 @@ program SPEC_field_reader
   write(*,*)
 
   ! the xi derivatives
-  s2 = s 
-  theta2 = theta 
-  xi2 = xi + delta
-  call get_spec_field(ss%A(lvol), s2, theta2, xi2, a2, gb2, dgb2)
+  call get_spec_field(ss%A(lvol), s, theta, xi+delta, a2, gb2, dgb2)
   dgb2(:,3) = (gb2 - gb) / delta
   write(*,*) 'theta derivatives of field, direct'
   write(*,*) dgb(:,3)

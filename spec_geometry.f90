@@ -1,269 +1,308 @@
 ! this module defines the data structure of geometry and the calculation of gij/dgij
-module spec_geometry
+MODULE spec_geometry
+  IMPLICIT NONE
 
-  type, public :: volume
+  TYPE, PUBLIC :: spec_metric
+     REAL :: jac                       !< Jacobian
+     REAL, DIMENSION(3) :: x           !<  the coordinates, for Igeometry==1 (Cartesian): (x, y, z)
+     !<                                                         Igeometry==2 (Cylinder):  (r, theta, z),
+     !<                                                         Igeometry==3 (Toroidal):  (R, phi, Z)
+     REAL, DIMENSION(3) :: grad_jac    !< gradient of the Jacobian with respect (s, theta, xi)
 
-    real, dimension(:,:), allocatable :: Rbc, Rbs, Zbc, Zbs
-    logical :: icoordinatesingularity
-    logical :: isym
-    integer, dimension(:), allocatable :: im, in
-    integer :: mn, nfp, mvol, igeometry, mpol, ntor
+     REAL, DIMENSION(3,3) :: gij       !< metric tensor (lower indices)
+     REAL, DIMENSION(3,3) :: jacmat    !< Jacobian matrix, for Igeometry==1 (Cartesian): d (x,y,z)/d(s,theta,xi)
+     !<                                                        Igeometry==2 (Cylinder):  d(r,theta,z)/d(s,theta,xi)
+     !<                                                        Igeometry==3 (Toroidal):  d(R,phi,Z)/d(s,theta,xi)
+     REAL, DIMENSION(3,3,3) :: dgij    !< dgij  the derivative of gij with respect to (s, theta, xi)
+     !< first and second indices: i,j; third index: derivative
 
-  end type volume
+     REAL :: Rij(0:3,0:3), Zij(0:3,0:3)
+  END TYPE spec_metric
 
-contains
+  TYPE, PUBLIC :: volume
+     REAL, DIMENSION(:,:), ALLOCATABLE :: Rbc, Rbs, Zbc, Zbs
+     LOGICAL :: icoordinatesingularity
+     LOGICAL :: isym
+     INTEGER, DIMENSION(:), ALLOCATABLE :: im, in
+     INTEGER :: mn, nfp, mvol, igeometry, mpol, ntor
+  END TYPE volume
 
-  subroutine get_spec_coord(v, lvol, s, theta, xi, jac, djac, x, gij, dgij)
-  ! Obtain the coordinate quantities
-  ! INPUTS:
-  ! v     - TYPE(volume), the volume object read from file
-  ! lvol  - INTEGER, which volume we are looking at,
-  ! s     - s coordinate
-  ! theta - theta coordinate
-  ! xi    - xi coordinate
-  ! RETURNS:
-  ! jac   - REAL, Jacobian
-  ! djac  - REAL(3), the derivative of Jacobian with respect (s, theta, xi)
-  ! x     - REAL(3), the coordinates, for Igeometry==1 (Cartisian): (x, y, z)
-  !                                       Igeometry==2 (Cylinder): (r, theta, z),
-  !                                       Igeometry==3 (Toroidal): (R, phi, Z)
-  ! gij   - REAL(3,3), metric tensor with lower indices
-  ! dgij  - REAL(3,3,3), the derivative of gij with respect to (s, theta, xi)
-  !                      first and second indices: i,j; third index: derivative
+CONTAINS
 
-    implicit none
-    type(volume) :: v
-    integer, intent(in) :: lvol
-    real, intent(in) :: s, theta, xi
+  !> Obtain the coordinate quantities
+  !> INPUTS:
+  !> v     - TYPE(volume), the volume object read from file
+  !> lvol  - INTEGER, which volume we are looking at,
+  !> s     - s coordinate
+  !> theta - theta coordinate
+  !> xi    - xi coordinate
+  !> RETURNS: a SPEC metric type
+  ! 
+  FUNCTION get_spec_metric(v, lvol, s, theta, xi)
+    TYPE(spec_metric), TARGET, SAVE :: cache
+    TYPE(spec_metric), POINTER :: get_spec_metric
 
-    real, intent(out) :: jac
-    real, dimension(3), intent(out) :: x, djac
-    real, dimension(3,3), intent(out) :: gij
-    real, dimension(3,3,3), intent(out) :: dgij
+    TYPE(volume),INTENT(IN) :: v
+    INTEGER, INTENT(in) :: lvol
+    REAL, INTENT(in) :: s, theta, xi
+    REAL, SAVE :: s_save=-300.,theta_save=-300.,xi_save=-300.
+    
+    INTEGER :: ii, jj, kk
 
-    real :: Rij(0:3,0:3), Zij(0:3,0:3)
-    real :: sbar, alss, blss
-    real, dimension(v%mn) :: alphai, cosai, sinai
-    real, dimension(v%mn) :: t1, t2, t3, t4, ddt1, ddt3, fj, dfj, ddfj
-    integer :: ii, jj, kk
-    integer :: mn
+    IF (s .NE. s_save .OR. theta .NE. theta_save .OR. xi .NE. xi_save) THEN
+       
+       cache%gij=0.
+       cache%jacmat=0.
+       cache%dgij=0.
+       
+       SELECT CASE(v%igeometry)
+       CASE (1) ! Cartesian
+          CALL get_spec_derivatives(v,lvol,s,theta,xi,cache%rij)
+          cache%x(1) = theta
+          cache%x(2) = xi
+          cache%x(3) = cache%Rij(0,0)
 
-    mn = v%mn
+          cache%jac = cache%Rij(0,1)
+          cache%grad_jac = cache%Rij(1:3,1)
 
-    Rij(:,:) = 0
-    Zij(:,:) = 0
-    x(:) = 0
-    gij(:,:) = 0
-    dgij(:,:,:) = 0
+          ! only non-vanishing terms
+          cache%jacmat(1,2) = 1.
+          cache%jacmat(2,3) = 1.
+          cache%jacmat(3,1:3) = cache%Rij(0,1:3)
 
-    alphai = v%im * theta - v%in * xi
+          DO ii = 1, 3
+             DO jj = ii, 3
+                cache%gij(jj,ii) = cache%gij(jj,ii) + cache%Rij(0,jj)*cache%Rij(0,ii)
+                DO kk = 1, 3
+                   cache%dgij(jj,ii,kk) = cache%dgij(jj,ii,kk) + cache%Rij(kk,jj)*cache%Rij(0,ii) + cache%Rij(0,jj)*cache%Rij(kk,ii)
+                END DO ! kk
+             END DO ! jj
+          END DO ! ii
+
+          cache%gij(2,2) = cache%gij(2,2) + 1.
+          cache%gij(3,3) = cache%gij(3,3) + 1.
+
+       CASE (2)  ! Cylindrical
+          CALL get_spec_derivatives(v,lvol,s,theta,xi,cache%Rij)
+
+          cache%x(1) = cache%Rij(0,0)
+          cache%x(2) = theta
+          cache%x(3) = xi
+
+          cache%jac = cache%Rij(0,0)*cache%Rij(0,1)
+          cache%grad_jac = cache%Rij(0,1:3)*cache%Rij(0,1) + cache%Rij(0,0)*cache%Rij(1:3,1)
+
+          ! only non-vanishing terms
+          cache%jacmat(1,1:3) = cache%Rij(0,1:3)
+          cache%jacmat(2,2) = 1.
+          cache%jacmat(3,3) = 1.
+
+          DO ii = 1, 3
+             DO jj = ii, 3
+                cache%gij(jj,ii) = cache%gij(jj,ii) + cache%Rij(0,jj)*cache%Rij(0,ii)
+                DO kk = 1, 3
+                   cache%dgij(jj,ii,kk) = cache%dgij(jj,ii,kk) + cache%Rij(kk,jj)*cache%Rij(0,ii) + cache%Rij(0,jj)*cache%Rij(kk,ii)
+                END DO ! kk
+             END DO ! jj
+          END DO ! ii
+
+          cache%gij(2,2) = cache%gij(2,2) + cache%Rij(0,0)**2
+          cache%gij(3,3) = cache%gij(3,3) + 1.
+          DO ii = 1, 3
+             cache%dgij(2,2,ii) = cache%dgij(2,2,ii) + 2.*cache%Rij(0,0)*cache%Rij(0,ii)
+          END DO ! ii
+
+
+       CASE (3) ! Toroidal
+          CALL get_spec_derivatives(v,lvol,s,theta,xi,cache%Rij,cache%Zij)
+
+          cache%x(1) = cache%Rij(0,0)
+          cache%x(2) = xi
+          cache%x(3) = cache%Zij(0,0)
+
+          cache%jac = cache%Rij(0,0)*(cache%Zij(0,1)*cache%Rij(0,2) - cache%Rij(0,1)*cache%Zij(0,2))
+          cache%grad_jac = cache%Rij(0,1:)*(cache%Zij(0,1)*cache%Rij(0,2) - cache%Rij(0,1)*cache%Zij(0,2))&
+               + cache%Rij(0,0)*(cache%Zij(1:,1)*cache%Rij(0,2) - cache%Rij(1:,1)*cache%Zij(0,2))&
+               + cache%Rij(0,0)*(cache%Zij(0,1)*cache%Rij(1:,2) - cache%Rij(0,1)*cache%Zij(1:,2))
+
+          ! only non-vanishing terms
+          cache%jacmat(1,1:3) = cache%Rij(0,1:3)
+          cache%jacmat(2,3) = 1.
+          cache%jacmat(3,1:3) = cache%Zij(0,1:3)      
+
+          DO ii = 1, 3
+             DO jj = ii, 3
+                cache%gij(jj,ii) = cache%gij(jj,ii) + cache%Rij(0,jj)*cache%Rij(0,ii) + cache%Zij(0,jj)*cache%Zij(0,ii)
+                DO kk = 1, 3
+                   cache%dgij(jj,ii,kk) = cache%dgij(jj,ii,kk)&
+                        + cache%Rij(kk,jj)*cache%Rij(0,ii)&
+                        + cache%Rij(0,jj)*cache%Rij(kk,ii)&
+                        + cache%Zij(kk,jj)*cache%Zij(0,ii)&
+                        + cache%Zij(0,jj)*cache%Zij(kk,ii)
+                END DO ! kk
+             END DO ! jj
+          END DO ! ii
+
+          cache%gij(3,3) = cache%gij(3,3) + cache%Rij(0,0)**2
+          DO ii = 1, 3
+             cache%dgij(3,3,ii) = cache%dgij(3,3,ii) + 2.*cache%Rij(0,0)*cache%Rij(0,ii)
+          END DO ! ii
+
+       CASE DEFAULT
+          STOP 'Igeometry must be 1 to 3'
+       END SELECT
+
+       cache%gij(1,2) = cache%gij(2,1)
+       cache%gij(1,3) = cache%gij(3,1)
+       cache%gij(2,3) = cache%gij(3,2)
+
+       s_save = s
+       theta_save = theta
+       xi_save = xi
+    END IF
+    get_spec_metric => cache
+
+  END FUNCTION get_spec_metric
+
+  SUBROUTINE get_spec_derivatives(v,lvol,s,theta,xi,Rij,Zij)
+    TYPE(volume),INTENT(IN) :: v
+    INTEGER, INTENT(in) :: lvol
+    REAL, INTENT(in) :: s, theta, xi
+    REAL,INTENT(OUT) :: Rij(0:3,0:3)
+    REAL,INTENT(OUT),OPTIONAL :: zij(0:3,0:3)
+
+    REAL :: sbar, alss, blss
+    REAL, DIMENSION(v%mn) :: alphai, cosai, sinai
+    REAL, DIMENSION(v%mn) :: t1, t2, t3, t4, ddt1, ddt3, fj, dfj, ddfj
+
+    alphai = v%im*theta - v%in*xi
     cosai = COS(alphai)
     sinai = SIN(alphai)
 
-    if (v%icoordinatesingularity .and. lvol == 1) then
-      sbar = (1.0 + s) / 2.0
-      fj(1:v%mpol+1) = sbar
-      dfj(1:v%mpol+1) = 0.5
-      ddfj(1:v%mpol+1) = 0.0
+    IF (v%icoordinatesingularity .AND. lvol == 1) THEN
+       sbar = (1. + s) / 2.
+       fj(1:v%mpol+1) = sbar
+       dfj(1:v%mpol+1) = 0.5
+       ddfj(1:v%mpol+1) = 0.
 
-      if (v%ntor > 0) then
-        ddfj(v%mpol+2:mn) = sbar**(v%im(v%mpol+2:mn)/2.0 - 2.0)
-        dfj(v%mpol+2:mn) = ddfj(v%mpol+2:mn) * sbar * v%im(v%mpol+2:mn) / 4.0
-        fj(v%mpol+2:mn) = ddfj(v%mpol+2:mn) * sbar**2
-        ddfj(v%mpol+2:mn) = ddfj(v%mpol+2:mn) * v%im(v%mpol+2:mn) * (v%im(v%mpol+2:mn) - 2.0) / 16.0
-      end if
+       IF (v%ntor.GT.0) THEN
+          ddfj(v%mpol+2:v%mn) = sbar**(v%im(v%mpol+2:v%mn)/2. - 2.)
+          dfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar*v%im(v%mpol+2:v%mn)/4.
+          fj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar**2
+          ddfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*v%im(v%mpol+2:v%mn)*(v%im(v%mpol+2:v%mn) - 2.)/16.
+       END IF
 
-      t1(:) = v%Rbc(:,0) + (v%Rbc(:,1) - v%Rbc(:,0)) * fj(:)
-      t2(:) = (v%Rbc(:,1) - v%Rbc(:,0)) * dfj(:)
-      ddt1(:) = (v%Rbc(:,1) - v%Rbc(:,0)) * ddfj(:)
-      if (.not. v%isym) then
-        t3(:) = v%Rbs(:,0) + (v%Rbs(:,1) - v%Rbs(:,0)) * fj(:)
-        t4(:) = (v%Rbs(:,1) - v%Rbs(:,0)) * dfj(:)
-        ddt3(:) = (v%Rbs(:,1) - v%Rbs(:,0)) * ddfj(:)
-      end if
+       t1(:) = v%Rbc(:,0) + (v%Rbc(:,1) - v%Rbc(:,0))*fj(:)
+       t2(:) = (v%Rbc(:,1) - v%Rbc(:,0))*dfj(:)
+       ddt1(:) = (v%Rbc(:,1) - v%Rbc(:,0))*ddfj(:)
+       IF (.NOT. v%isym) THEN
+          t3(:) = v%Rbs(:,0) + (v%Rbs(:,1) - v%Rbs(:,0))*fj(:)
+          t4(:) = (v%Rbs(:,1) - v%Rbs(:,0))*dfj(:)
+          ddt3(:) = (v%Rbs(:,1) - v%Rbs(:,0))*ddfj(:)
+       END IF
 
-    else
-      alss = 0.5 * ( 1.0 - s )
-      blss = 0.5 * ( 1.0 + s )
-      t1(:) = (alss * v%Rbc(:,lvol-1) + blss * v%Rbc(:,lvol))
-      t2(:) = (-0.5 * v%Rbc(:,lvol-1) + 0.5 * v%Rbc(:,lvol))
-      ddt1(:) = 0.0
-      if (.not. v%isym) then
-        t3(:) = (alss * v%Rbs(:,lvol-1) + blss * v%Rbs(:,lvol))
-        t4(:) = (-0.5 * v%Rbs(:,lvol-1) + 0.5 * v%Rbs(:,lvol))
-        ddt3(:) = 0.0
-      end if
-    end if
+    ELSE
+       alss = 0.5*( 1. - s )
+       blss = 0.5*( 1. + s )
+       t1(:) = (alss*v%Rbc(:,lvol-1) + blss*v%Rbc(:,lvol))
+       t2(:) = (-0.5*v%Rbc(:,lvol-1) + 0.5*v%Rbc(:,lvol))
+       ddt1(:) = 0.
+       IF (.NOT. v%isym) THEN
+          t3(:) = (alss*v%Rbs(:,lvol-1) + blss*v%Rbs(:,lvol))
+          t4(:) = (-0.5*v%Rbs(:,lvol-1) + 0.5*v%Rbs(:,lvol))
+          ddt3(:) = 0.
+       END IF
+    END IF
 
-    Rij(0,0) = SUM(t1 * cosai)
-    Rij(0,1) = SUM(t2 * cosai)
-    Rij(0,2) = SUM(t1 * (-v%im * sinai))
-    Rij(0,3) = SUM(t1 * (v%in * sinai))
-    Rij(1,1) = SUM(ddt1 * cosai)
-    Rij(1,2) = SUM(t2 * (-v%im * sinai))
-    Rij(1,3) = SUM(t2 * (v%in * sinai))
-    Rij(2,2) = SUM(t1 * (-v%im**2 * cosai))
-    Rij(2,3) = SUM(t1 * (v%im * v%in * cosai))
-    Rij(3,3) = SUM(t1 * (-v%in**2 * cosai))
+    Rij(0,0) = SUM(t1*cosai)                  ! R
+    Rij(0,1) = SUM(t2*cosai)                  ! dRds
+    Rij(0,2) = SUM(t1*(-v%im*sinai))        ! dRdu
+    Rij(0,3) = SUM(t1*(v%in*sinai))         ! dRdv
+    Rij(1,1) = SUM(ddt1*cosai)                ! d2Rds2
+    Rij(1,2) = SUM(t2*(-v%im*sinai))        ! d2Rdsdu
+    Rij(1,3) = SUM(t2*(v%in*sinai))         ! d2Rdsdv
+    Rij(2,2) = SUM(t1*(-v%im**2*cosai))     ! d2Rdu2
+    Rij(2,3) = SUM(t1*(v%im*v%in*cosai))  ! d2Rdudv
+    Rij(3,3) = SUM(t1*(-v%in**2*cosai))     ! d2Rdv2
 
-    if (.not. v%isym) then
-      Rij(0,0) = Rij(0,0) + SUM(t3 * sinai)
-      Rij(0,1) = Rij(0,1) + SUM(t4 * sinai)
-      Rij(0,2) = Rij(0,2) + SUM(t3 * (v%im * cosai))
-      Rij(0,3) = Rij(0,3) + SUM(t3 * (-v%in * cosai))
-      Rij(1,1) = Rij(1,1) + SUM(ddt3 * sinai)
-      Rij(1,2) = Rij(1,2) + SUM(t4 * (v%im * cosai))
-      Rij(1,3) = Rij(1,3) + SUM(t4 * (-v%in * cosai))
-      Rij(2,2) = Rij(2,2) + SUM(t3 * (-v%im**2 * sinai))
-      Rij(2,3) = Rij(2,3) + SUM(t3 * (v%im * v%in * sinai))
-      Rij(3,3) = Rij(3,3) + SUM(t3 * (-v%in**2 * sinai))
-    end if
+    IF (.NOT. v%isym) THEN
+       Rij(0,0) = Rij(0,0) + SUM(t3*sinai)
+       Rij(0,1) = Rij(0,1) + SUM(t4*sinai)
+       Rij(0,2) = Rij(0,2) + SUM(t3*(v%im*cosai))
+       Rij(0,3) = Rij(0,3) + SUM(t3*(-v%in*cosai))
+       Rij(1,1) = Rij(1,1) + SUM(ddt3*sinai)
+       Rij(1,2) = Rij(1,2) + SUM(t4*(v%im*cosai))
+       Rij(1,3) = Rij(1,3) + SUM(t4*(-v%in*cosai))
+       Rij(2,2) = Rij(2,2) + SUM(t3*(-v%im**2*sinai))
+       Rij(2,3) = Rij(2,3) + SUM(t3*(v%im*v%in*sinai))
+       Rij(3,3) = Rij(3,3) + SUM(t3*(-v%in**2*sinai))
+    END IF
 
     Rij(2,1) = Rij(1,2)
     Rij(3,1) = Rij(1,3)
     Rij(3,2) = Rij(2,3)
 
-    if (v%igeometry == 1) then ! Cartesian
-      jac = Rij(0,1)
-      djac(:) = Rij(1:,1)
+    IF(PRESENT(zij)) THEN
+       IF (v%icoordinatesingularity .AND. lvol == 1) THEN
 
-      x(1) = theta
-      x(2) = xi
-      x(3) = Rij(0,0)
+          t1(:) = v%Zbs(:,0) + (v%Zbs(:,1) - v%Zbs(:,0))*fj(:)
+          t2(:) = (v%Zbs(:,1) - v%Zbs(:,0))*dfj(:)
+          ddt1(:) = (v%Zbs(:,1) - v%Zbs(:,0))*ddfj(:)
+          IF (.NOT. v%isym) THEN
+             t3(:) = v%Zbc(:,0) + (v%Zbc(:,1) - v%Zbc(:,0))*fj(:)
+             t4(:) = (v%Zbc(:,1) - v%Zbc(:,0))*dfj(:)
+             ddt3(:) = (v%Zbc(:,1) - v%Zbc(:,0))*ddfj(:)
+          END IF
 
-      do ii = 1, 3
-        do jj = ii, 3
-          gij(jj,ii) = gij(jj,ii) + Rij(0,jj) * Rij(0,ii)
-          do kk = 1, 3
-            dgij(jj,ii,kk) = dgij(jj,ii,kk) + Rij(kk,jj) * Rij(0,ii) + Rij(0,jj) * Rij(kk,ii)
-          end do ! kk
-        end do ! jj
-      end do ! ii
+       ELSE
+          alss = 0.5*( 1. - s )
+          blss = 0.5*( 1. + s )
+          t1(:) = (alss*v%Zbs(:,lvol-1) + blss*v%Zbs(:,lvol))
+          t2(:) = (-0.5*v%Zbs(:,lvol-1) + 0.5*v%Zbs(:,lvol))
+          ddt1(:) = 0.
+          IF (.NOT. v%isym) THEN
+             t3(:) = (alss*v%Zbc(:,lvol-1) + blss*v%Zbc(:,lvol))
+             t4(:) = (-0.5*v%Zbc(:,lvol-1) + 0.5*v%Zbc(:,lvol))
+             ddt3(:) = 0.
+          END IF
+       END IF
 
-      gij(2,2) = gij(2,2) + 1.0
-      gij(3,3) = gij(3,3) + 1.0
+       Zij(0,0) = SUM(t1*sinai)
+       Zij(0,1) = SUM(t2*sinai)
+       Zij(0,2) = SUM(t1*(v%im*cosai))
+       Zij(0,3) = SUM(t1*(-v%in*cosai))
+       Zij(1,1) = SUM(ddt1*sinai)
+       Zij(1,2) = SUM(t2*(v%im*cosai))
+       Zij(1,3) = SUM(t2*(-v%in*cosai))
+       Zij(2,2) = SUM(t1*(-v%im**2*sinai))
+       Zij(2,3) = SUM(t1*(v%im*v%in*sinai))
+       Zij(3,3) = SUM(t1*(-v%in**2*sinai))
 
-    elseif (v%igeometry == 2) then ! Cylindrical
+       IF (.NOT. v%isym) THEN
+          Zij(0,0) = Zij(0,0) + SUM(t3*cosai)
+          Zij(0,1) = Zij(0,1) + SUM(t4*cosai)
+          Zij(0,2) = Zij(0,2) + SUM(t3*(-v%im*sinai))
+          Zij(0,3) = Zij(0,3) + SUM(t3*(v%in*sinai))
+          Zij(1,1) = Zij(1,1) + SUM(ddt3*cosai)
+          Zij(1,2) = Zij(1,2) + SUM(t4*(-v%im*sinai))
+          Zij(1,3) = Zij(1,3) + SUM(t4*(v%in*sinai))
+          Zij(2,2) = Zij(2,2) + SUM(t3*(-v%im**2*cosai))
+          Zij(2,3) = Zij(2,3) + SUM(t3*(v%im*v%in*cosai))
+          Zij(3,3) = Zij(3,3) + SUM(t3*(-v%in**2*cosai))
+       END IF
 
-      jac = Rij(0,0) * Rij(0,1)
-      djac(:) = Rij(0,1:) * Rij(0,1) + Rij(0,0) * Rij(1:,1)
+       Zij(2,1) = Zij(1,2)
+       Zij(3,1) = Zij(1,3)
+       Zij(3,2) = Zij(2,3)
+    END IF
+  END SUBROUTINE get_spec_derivatives
 
-      x(1) = Rij(0,0)
-      x(2) = theta
-      x(3) = xi
 
-      do ii = 1, 3
-        do jj = ii, 3
-          gij(jj,ii) = gij(jj,ii) + Rij(0,jj) * Rij(0,ii)
-          do kk = 1, 3
-            dgij(jj,ii,kk) = dgij(jj,ii,kk) + Rij(kk,jj) * Rij(0,ii) + Rij(0,jj) * Rij(kk,ii)
-          end do ! kk
-        end do ! jj
-      end do ! ii
+  SUBROUTINE destroy_volume(v)
+    IMPLICIT NONE
+    TYPE(volume) :: v
+    IF (ALLOCATED(v%im)) DEALLOCATE(v%im)
+    IF (ALLOCATED(v%im)) DEALLOCATE(v%im)
+  END SUBROUTINE destroy_volume
 
-      gij(2,2) = gij(2,2) + Rij(0,0)**2
-      gij(3,3) = gij(3,3) + 1.0
-      do ii = 1, 3
-        dgij(2,2,ii) = dgij(2,2,ii) + 2.0 * Rij(0,0) * Rij(0,ii)
-      end do ! ii
-
-    elseif (v%igeometry == 3) then ! Toroidal
-    ! compute Zij
-      if (v%icoordinatesingularity .and. lvol == 1) then
-  
-        t1(:) = v%Zbs(:,0) + (v%Zbs(:,1) - v%Zbs(:,0)) * fj(:)
-        t2(:) = (v%Zbs(:,1) - v%Zbs(:,0)) * dfj(:)
-        ddt1(:) = (v%Zbs(:,1) - v%Zbs(:,0)) * ddfj(:)
-        if (.not. v%isym) then
-          t3(:) = v%Zbc(:,0) + (v%Zbc(:,1) - v%Zbc(:,0)) * fj(:)
-          t4(:) = (v%Zbc(:,1) - v%Zbc(:,0)) * dfj(:)
-          ddt3(:) = (v%Zbc(:,1) - v%Zbc(:,0)) * ddfj(:)
-        end if
-
-      else
-        alss = 0.5 * ( 1.0 - s )
-        blss = 0.5 * ( 1.0 + s )
-        t1(:) = (alss * v%Zbs(:,lvol-1) + blss * v%Zbs(:,lvol))
-        t2(:) = (-0.5 * v%Zbs(:,lvol-1) + 0.5 * v%Zbs(:,lvol))
-        ddt1(:) = 0.0
-        if (.not. v%isym) then
-          t3(:) = (alss * v%Zbc(:,lvol-1) + blss * v%Zbc(:,lvol))
-          t4(:) = (-0.5 * v%Zbc(:,lvol-1) + 0.5 * v%Zbc(:,lvol))
-          ddt3(:) = 0.0
-        end if
-      end if
-
-      Zij(0,0) = SUM(t1 * sinai)
-      Zij(0,1) = SUM(t2 * sinai)
-      Zij(0,2) = SUM(t1 * (v%im * cosai))
-      Zij(0,3) = SUM(t1 * (-v%in * cosai))
-      Zij(1,1) = SUM(ddt1 * sinai)
-      Zij(1,2) = SUM(t2 * (v%im * cosai))
-      Zij(1,3) = SUM(t2 * (-v%in * cosai))
-      Zij(2,2) = SUM(t1 * (-v%im**2 * sinai))
-      Zij(2,3) = SUM(t1 * (v%im * v%in * sinai))
-      Zij(3,3) = SUM(t1 * (-v%in**2 * sinai))
-
-      if (.not. v%isym) then
-        Zij(0,0) = Zij(0,0) + SUM(t3 * cosai)
-        Zij(0,1) = Zij(0,1) + SUM(t4 * cosai)
-        Zij(0,2) = Zij(0,2) + SUM(t3 * (-v%im * sinai))
-        Zij(0,3) = Zij(0,3) + SUM(t3 * (v%in * sinai))
-        Zij(1,1) = Zij(1,1) + SUM(ddt3 * cosai)
-        Zij(1,2) = Zij(1,2) + SUM(t4 * (-v%im * sinai))
-        Zij(1,3) = Zij(1,3) + SUM(t4 * (v%in * sinai))
-        Zij(2,2) = Zij(2,2) + SUM(t3 * (-v%im**2 * cosai))
-        Zij(2,3) = Zij(2,3) + SUM(t3 * (v%im * v%in * cosai))
-        Zij(3,3) = Zij(3,3) + SUM(t3 * (-v%in**2 * cosai))
-      end if
-
-      Zij(2,1) = Zij(1,2)
-      Zij(3,1) = Zij(1,3)
-      Zij(3,2) = Zij(2,3)
-
-      jac = Rij(0,0) * (Zij(0,1)*Rij(0,2) - Rij(0,1)*Zij(0,2))
-      djac(:) = Rij(0,1:) * (Zij(0,1)*Rij(0,2) - Rij(0,1)*Zij(0,2)) &
-              + Rij(0,0) * (Zij(1:,1)*Rij(0,2) - Rij(1:,1)*Zij(0,2)) &
-              + Rij(0,0) * (Zij(0,1)*Rij(1:,2) - Rij(0,1)*Zij(1:,2))
-
-      x(1) = Rij(0,0)
-      x(2) = xi
-      x(3) = Zij(0,0)
-
-      do ii = 1, 3
-        do jj = ii, 3
-          gij(jj,ii) = gij(jj,ii) + Rij(0,jj) * Rij(0,ii) + Zij(0,jj) * Zij(0,ii)
-          do kk = 1, 3
-            dgij(jj,ii,kk) = dgij(jj,ii,kk) + Rij(kk,jj) * Rij(0,ii) + Rij(0,jj) * Rij(kk,ii) &
-                                            + Zij(kk,jj) * Zij(0,ii) + Zij(0,jj) * Zij(kk,ii)
-          end do ! kk
-        end do ! jj
-      end do ! ii
-
-      gij(3,3) = gij(3,3) + Rij(0,0)**2
-      do ii = 1, 3
-        dgij(3,3,ii) = dgij(3,3,ii) + 2.0 * Rij(0,0) * Rij(0,ii)
-      end do ! ii
-    else                           ! Unknown, error
-      STOP 'Igeometry must be 1 to 3'
-    end if ! igeometry
-
-    gij(1,2) = gij(2,1)
-    gij(1,3) = gij(3,1)
-    gij(2,3) = gij(3,2)
-    do ii = 1, 3
-      dgij(1,2,ii) = dgij(2,1,ii)
-      dgij(1,3,ii) = dgij(3,1,ii)
-      dgij(2,3,ii) = dgij(3,2,ii)
-    end do 
-
-  end subroutine get_spec_coord
-
-  subroutine destroy_volume(v)
-    implicit none
-    type(volume) :: v
-    if (ALLOCATED(v%im)) deallocate(v%im)
-    if (ALLOCATED(v%im)) deallocate(v%im)
-  end subroutine destroy_volume
-
-end module spec_geometry
+END MODULE spec_geometry
