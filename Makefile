@@ -1,5 +1,5 @@
 FC=gfortran
-FFLAGS=-fdefault-real-8 -fbounds-check -g -fbacktrace -fcheck=all -fimplicit-none
+FFLAGS=-fdefault-real-8
 
 MACRO=
 
