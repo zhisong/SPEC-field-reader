@@ -156,6 +156,10 @@ CONTAINS
        cache%gij(1,3) = cache%gij(3,1)
        cache%gij(2,3) = cache%gij(3,2)
 
+       cache%dgij(1,2,1) = cache%dgij(2,1,1)
+       cache%dgij(1,2,2) = cache%dgij(2,1,2)
+       cache%dgij(1,2,3) = cache%dgij(2,1,3)
+       
        s_save = s
        theta_save = theta
        xi_save = xi
