@@ -185,10 +185,16 @@ CONTAINS
 
     IF (v%icoordinatesingularity .AND. lvol == 1) THEN
        sbar = (1. + s) / 2.
-       fj(1:v%mpol+1) = sbar
-       dfj(1:v%mpol+1) = 0.5
-       ddfj(1:v%mpol+1) = 0.
+      fj(1:v%mpol+1) = sbar
+      dfj(1:v%mpol+1) = 0.5
+      ddfj(1:v%mpol+1) = 0.
 
+      ! fj(1)    = sbar
+      ! dfj(1)   = 0.5
+      ! ddfj(1)  = 0.
+      ! fj(2:v%mpol+1) = sbar**(v%im(2:v%mpol+1)/2.)
+      ! dfj(2:v%mpol+1) = (v%im(2:v%mpol+1)/4.) * sbar**(v%im(2:v%mpol+1)/2. - 1.)
+      ! ddfj(2:v%mpol+1) = 0.
        IF (v%ntor.GT.0) THEN
           ddfj(v%mpol+2:v%mn) = sbar**(v%im(v%mpol+2:v%mn)/2. - 2.)
           dfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar*v%im(v%mpol+2:v%mn)/4.
