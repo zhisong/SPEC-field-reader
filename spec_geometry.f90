@@ -184,32 +184,39 @@ CONTAINS
     sinai = SIN(alphai)
 
     IF (v%icoordinatesingularity .AND. lvol == 1) THEN
-       sbar = (1. + s) / 2.
-      fj(1:v%mpol+1) = sbar
-      dfj(1:v%mpol+1) = 0.5
-      ddfj(1:v%mpol+1) = 0.
 
-      ! fj(1)    = sbar
-      ! dfj(1)   = 0.5
-      ! ddfj(1)  = 0.
-      ! fj(2:v%mpol+1) = sbar**(v%im(2:v%mpol+1)/2.)
-      ! dfj(2:v%mpol+1) = (v%im(2:v%mpol+1)/4.) * sbar**(v%im(2:v%mpol+1)/2. - 1.)
-      ! ddfj(2:v%mpol+1) = 0.
-       IF (v%ntor.GT.0) THEN
-          ddfj(v%mpol+2:v%mn) = sbar**(v%im(v%mpol+2:v%mn)/2. - 2.)
-          dfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar*v%im(v%mpol+2:v%mn)/4.
-          fj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar**2
-          ddfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*v%im(v%mpol+2:v%mn)*(v%im(v%mpol+2:v%mn) - 2.)/16.
-       END IF
+      ! IF (v%ntor.EQ.0) THEN
+      ! m=0 modes
+      sbar = (1. + s) / 2.
+      ! fj(1:v%mpol+1) = sbar
+      ! dfj(1:v%mpol+1) = 0.5
+      ! ddfj(1:v%mpol+1) = 0.
 
-       t1(:) = v%Rbc(:,0) + (v%Rbc(:,1) - v%Rbc(:,0))*fj(:)
-       t2(:) = (v%Rbc(:,1) - v%Rbc(:,0))*dfj(:)
-       ddt1(:) = (v%Rbc(:,1) - v%Rbc(:,0))*ddfj(:)
-       IF (.NOT. v%isym) THEN
-          t3(:) = v%Rbs(:,0) + (v%Rbs(:,1) - v%Rbs(:,0))*fj(:)
-          t4(:) = (v%Rbs(:,1) - v%Rbs(:,0))*dfj(:)
-          ddt3(:) = (v%Rbs(:,1) - v%Rbs(:,0))*ddfj(:)
-       END IF
+         fj(1)    = sbar
+         dfj(1)   = 0.5
+         ddfj(1)  = 0.
+
+         fj(2:v%mpol+1) = sbar**(v%im(2:v%mpol+1)/2.)
+         dfj(2:v%mpol+1) = (v%im(2:v%mpol+1)/4.) * sbar**(v%im(2:v%mpol+1)/2. - 1.)
+         ddfj(2:v%mpol+1) = 0.
+   
+      IF (v%ntor.GT.0) THEN
+         sbar = (1. + s) / 2.
+
+         ddfj(v%mpol+2:v%mn) = sbar**(v%im(v%mpol+2:v%mn)/2. - 2.)
+         dfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar*v%im(v%mpol+2:v%mn)/4.
+         fj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar**2
+         ddfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*v%im(v%mpol+2:v%mn)*(v%im(v%mpol+2:v%mn) - 2.)/16.
+      END IF
+
+      t1(:) = v%Rbc(:,0) + (v%Rbc(:,1) - v%Rbc(:,0))*fj(:)
+      t2(:) = (v%Rbc(:,1) - v%Rbc(:,0))*dfj(:)
+      ddt1(:) = (v%Rbc(:,1) - v%Rbc(:,0))*ddfj(:)
+      IF (.NOT. v%isym) THEN
+         t3(:) = v%Rbs(:,0) + (v%Rbs(:,1) - v%Rbs(:,0))*fj(:)
+         t4(:) = (v%Rbs(:,1) - v%Rbs(:,0))*dfj(:)
+         ddt3(:) = (v%Rbs(:,1) - v%Rbs(:,0))*ddfj(:)
+      END IF
 
     ELSE
        alss = 0.5*( 1. - s )
