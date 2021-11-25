@@ -128,7 +128,7 @@ CONTAINS
           ! only non-vanishing terms
           cache%jacmat(1,1:3) = cache%Rij(0,1:3)
           cache%jacmat(2,3) = 1.
-          cache%jacmat(3,1:3) = cache%Zij(0,1:3)      
+          cache%jacmat(3,1:3) = cache%Zij(0,1:3)
 
           DO ii = 1, 3
              DO jj = ii, 3
@@ -143,30 +143,31 @@ CONTAINS
              END DO ! jj
           END DO ! ii
 
-          cache%gij(3,3) = cache%gij(3,3) + cache%Rij(0,0)**2
-          DO ii = 1, 3
-             cache%dgij(3,3,ii) = cache%dgij(3,3,ii) + 2.*cache%Rij(0,0)*cache%Rij(0,ii)
-          END DO ! ii
+            cache%gij(3,3) = cache%gij(3,3) + cache%Rij(0,0)**2
+            DO ii = 1, 3
+               cache%dgij(3,3,ii) = cache%dgij(3,3,ii) + 2.*cache%Rij(0,0)*cache%Rij(0,ii)
+            END DO ! ii
 
-       CASE DEFAULT
-          STOP 'Igeometry must be 1 to 3'
-       END SELECT
 
-       cache%gij(1,2) = cache%gij(2,1)
-       cache%gij(1,3) = cache%gij(3,1)
-       cache%gij(2,3) = cache%gij(3,2)
+         CASE DEFAULT
+            STOP 'Igeometry must be 1 to 3'
+         END SELECT
 
-       cache%dgij(1,2,1) = cache%dgij(2,1,1)
-       cache%dgij(1,2,2) = cache%dgij(2,1,2)
-       cache%dgij(1,2,3) = cache%dgij(2,1,3)
-       
-       s_save = s
-       theta_save = theta
-       xi_save = xi
-    END IF
-    get_spec_metric => cache
+         cache%gij(1,2) = cache%gij(2,1)
+         cache%gij(1,3) = cache%gij(3,1)
+         cache%gij(2,3) = cache%gij(3,2)
 
-  END FUNCTION get_spec_metric
+         cache%dgij(1,2,1) = cache%dgij(2,1,1)
+         cache%dgij(1,2,2) = cache%dgij(2,1,2)
+         cache%dgij(1,2,3) = cache%dgij(2,1,3)
+         
+         s_save = s
+         theta_save = theta
+         xi_save = xi
+      END IF
+      get_spec_metric => cache
+
+   END FUNCTION get_spec_metric
 
   SUBROUTINE get_spec_derivatives(v,lvol,s,theta,xi,Rij,Zij)
     TYPE(volume),INTENT(IN) :: v
@@ -179,18 +180,14 @@ CONTAINS
     REAL, DIMENSION(v%mn) :: alphai, cosai, sinai
     REAL, DIMENSION(v%mn) :: t1, t2, t3, t4, ddt1, ddt3, fj, dfj, ddfj
 
-    alphai = v%im*theta - v%in*xi
-    cosai = COS(alphai)
-    sinai = SIN(alphai)
+   alphai = v%im*theta - v%in*xi
+   cosai = COS(alphai)
+   sinai = SIN(alphai)
 
-    IF (v%icoordinatesingularity .AND. lvol == 1) THEN
+   IF (v%icoordinatesingularity .AND. lvol == 1) THEN
+      ! See Z S Qu et al 2020 Plasma Phys. Control Fusion for the Zernike coordinate parameterisation
 
-      ! IF (v%ntor.EQ.0) THEN
-      ! m=0 modes
-      sbar = (1. + s) / 2.
-      ! fj(1:v%mpol+1) = sbar
-      ! dfj(1:v%mpol+1) = 0.5
-      ! ddfj(1:v%mpol+1) = 0.
+         sbar = (1. + s) / 2.
 
          fj(1)    = sbar
          dfj(1)   = 0.5
@@ -199,10 +196,8 @@ CONTAINS
          fj(2:v%mpol+1) = sbar**(v%im(2:v%mpol+1)/2.)
          dfj(2:v%mpol+1) = (v%im(2:v%mpol+1)/4.) * sbar**(v%im(2:v%mpol+1)/2. - 1.)
          ddfj(2:v%mpol+1) = 0.
-   
-      IF (v%ntor.GT.0) THEN
-         sbar = (1. + s) / 2.
 
+      IF (v%ntor.GT.0) THEN
          ddfj(v%mpol+2:v%mn) = sbar**(v%im(v%mpol+2:v%mn)/2. - 2.)
          dfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar*v%im(v%mpol+2:v%mn)/4.
          fj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar**2
@@ -218,7 +213,7 @@ CONTAINS
          ddt3(:) = (v%Rbs(:,1) - v%Rbs(:,0))*ddfj(:)
       END IF
 
-    ELSE
+    ELSE !Use Chebychev basis for lvol > 1
        alss = 0.5*( 1. - s )
        blss = 0.5*( 1. + s )
        t1(:) = (alss*v%Rbc(:,lvol-1) + blss*v%Rbc(:,lvol))
@@ -229,7 +224,7 @@ CONTAINS
           t4(:) = (-0.5*v%Rbs(:,lvol-1) + 0.5*v%Rbs(:,lvol))
           ddt3(:) = 0.
        END IF
-    END IF
+   END IF
 
     Rij(0,0) = SUM(t1*cosai)                  ! R
     Rij(0,1) = SUM(t2*cosai)                  ! dRds
@@ -261,7 +256,6 @@ CONTAINS
 
     IF(PRESENT(zij)) THEN
        IF (v%icoordinatesingularity .AND. lvol == 1) THEN
-
           t1(:) = v%Zbs(:,0) + (v%Zbs(:,1) - v%Zbs(:,0))*fj(:)
           t2(:) = (v%Zbs(:,1) - v%Zbs(:,0))*dfj(:)
           ddt1(:) = (v%Zbs(:,1) - v%Zbs(:,0))*ddfj(:)
