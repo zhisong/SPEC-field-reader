@@ -59,27 +59,20 @@ contains
     gb(:) = 0
     a(:) = 0
 
+
     IF (af%isingular) THEN
       sbar = (s + 1.0)/2.0
       CALL get_zernike(sbar,lrad,mpol,zernike)
-        ! sbarmi = sbar**im
-        ! zernike(:,:,0) = zernike(:,:,0)
-        ! zernike(:,:,1) = zernike(:,:,1)
-        ! zernike(:,:,2) = zernike(:,:,2)
-        ! zernike(:,:,1) = zernike(:,:,1) * sbarmi + zernike(:,:,0) * sbarmi / sbar * im / 4.0
-        ! zernike(:,:,2) = zernike(:,:,2)*sbarmi + zernike(:,:,1) * sbarmi / sbar * im /2.0 &
-        !           + zernike(:,:,0) * sbarmi/sbar**2 * im * (im/2.0 - 1.0) / 8.0
     ELSE
       CALL get_cheby(s,lrad,cheby)
     END IF
 
-    do ii = 1, mn
-      ! shorthand
+
+    DO ii = 1, mn
       im = af%im(ii)
       in = af%in(ii)
 
-      ! alphai = m * theta - n * xi
-      alphai = im * theta - in * xi
+      alphai = im*theta - in*xi
       cosai = COS(alphai)
       sinai = SIN(alphai)
 
@@ -117,6 +110,8 @@ contains
         gb(1) = gb(1) - (im * af%Aze(ll,ii) + in * af%Ate(ll,ii)) * TT(0) * sinai
         gb(2) = gb(2) - af%Aze(ll,ii) * TT(1) * cosai
         gb(3) = gb(3) + af%Ate(ll,ii) * TT(1) * cosai
+
+        !--- DERIVATIVES
         ! Derivatives (ds)
         dgb(1,1) = dgb(1,1) - (im * af%Aze(ll,ii) + in * af%Ate(ll,ii)) * TT(1) * sinai
         dgb(2,1) = dgb(2,1) - af%Aze(ll,ii) * TT(2) * cosai
@@ -127,8 +122,10 @@ contains
         dgb(3,2) = dgb(3,2) - im * in*af%Ate(ll,ii) * TT(1) * sinai
         ! Derivatives (dzeta)
         dgb(1,3) = dgb(1,3) + in * (im*af%Aze(ll,ii) + in*af%Ate(ll,ii)) * TT(0) * cosai
-        dgb(1,3) = dgb(1,3) - in * af%Aze(ll,ii)  * TT(1) * sinai
-        dgb(1,3) = dgb(1,3) + in * af%Ate(ll,ii)  * TT(1) * sinai
+        ! dgb(1,3) = dgb(1,3) - in * af%Aze(ll,ii)  * TT(1) * sinai
+        ! dgb(1,3) = dgb(1,3) + in * af%Ate(ll,ii)  * TT(1) * sinai
+        dgb(2,3) = dgb(2,3) - in * af%Aze(ll,ii)  * TT(1) * sinai
+        dgb(3,3) = dgb(3,3) + in * af%Ate(ll,ii)  * TT(1) * sinai
 
         IF (.NOT.af%isym) THEN
 
@@ -148,8 +145,10 @@ contains
           dgb(3,2) = dgb(3,2) + im * af%Ato(ll,ii)  * TT(1) * cosai
 
           dgb(1,3) = dgb(1,3) + in * (im*af%Azo(ll,ii) + in*af%Ato(ll,ii)) * TT(0) * sinai
-          dgb(1,3) = dgb(1,3) + in * af%Azo(ll,ii)  * TT(1) * cosai
-          dgb(1,3) = dgb(1,3) - in * af%Ato(ll,ii)  * TT(1) * cosai
+          ! dgb(1,3) = dgb(1,3) + in * af%Azo(ll,ii)  * TT(1) * cosai
+          ! dgb(1,3) = dgb(1,3) - in * af%Ato(ll,ii)  * TT(1) * cosai
+          dgb(2,3) = dgb(2,3) + in * af%Azo(ll,ii)  * TT(1) * cosai
+          dgb(3,3) = dgb(3,3) - in * af%Ato(ll,ii)  * TT(1) * cosai
         ENDIF
 
       END DO
