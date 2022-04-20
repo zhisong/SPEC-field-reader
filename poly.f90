@@ -22,20 +22,13 @@ MODULE poly
 
     integer :: ll
 
-    cheby(0,0) = 1.0
-    cheby(1,0) = s
-    cheby(0,1) = 0.0
-    cheby(1,1) = 1.0
-    cheby(0,2) = 0.0
-    cheby(1,2) = 0.0
+    cheby(0,0:2) = (/ 1.0, 0.0, 0.0 /)
+    cheby(1,0:2) = (/ s, 1.0, 0.0 /)
 
-    ! T(0) = 1.0
-    ! T(1) = s
     DO ll = 2, lrad
-      ! T(ll) = 2.0 * s * T(ll-1) - T(ll-2)
       cheby(ll,0) = 2.0 * s * cheby(ll-1,0) - cheby(ll-2,0) ! chebychev
-      cheby(ll,1) = 2.0 * cheby(ll-1,1) + 2.0 * s * cheby(ll-1,1) - cheby(ll-2,1) ! derivative
-      cheby(ll,2) = 4.0 * cheby(ll-1,2) + 2.0 * s * cheby(ll-1,2) - cheby(ll-2,2) ! second derivative
+      cheby(ll,1) = 2.0 * cheby(ll-1,0) + 2.0 * s * cheby(ll-1,1) - cheby(ll-2,1) ! derivative
+      cheby(ll,2) = 4.0 * cheby(ll-1,1) + 2.0 * s * cheby(ll-1,2) - cheby(ll-2,2) ! second derivative
     END DO
 
   END SUBROUTINE get_cheby
