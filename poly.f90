@@ -18,18 +18,29 @@ MODULE poly
     INTEGER, INTENT(IN) :: lrad
     REAL, INTENT(IN) :: s
 
-    REAL, DIMENSION(0:lrad,0:2) :: cheby
+    REAL, INTENT(INOUT), DIMENSION(0:lrad,0:2) :: cheby
 
-    integer :: ll
+    INTEGER :: ll
 
     cheby(0,0:2) = (/ 1.0, 0.0, 0.0 /)
     cheby(1,0:2) = (/ s, 1.0, 0.0 /)
 
     DO ll = 2, lrad
-      cheby(ll,0) = 2.0 * s * cheby(ll-1,0) - cheby(ll-2,0) ! chebychev
+      cheby(ll,0) = 2.0 * s * cheby(ll-1,0) - cheby(ll-2,0) - (-1.0)**ll  ! chebychev
       cheby(ll,1) = 2.0 * cheby(ll-1,0) + 2.0 * s * cheby(ll-1,1) - cheby(ll-2,1) ! derivative
       cheby(ll,2) = 4.0 * cheby(ll-1,1) + 2.0 * s * cheby(ll-1,2) - cheby(ll-2,2) ! second derivative
     END DO
+
+    DO ll = 1, lrad
+      cheby(ll, 0) = cheby(ll,0) - (-1.0)**ll
+    END DO
+
+    DO ll = 0, lrad
+      cheby(ll, 0:2) = cheby(ll, 0:2) / FLOAT(ll+1)
+    END DO
+      ! cheby(ll,0:2) = cheby(ll,0:2) / FLOAT(ll+1)
+    ! cheby(1,0) = ( cheby(1,0) + 1.0 ) / 2.0
+    ! cheby(0,0:2) = cheby(0,0:2) / 1.0
 
   END SUBROUTINE get_cheby
 

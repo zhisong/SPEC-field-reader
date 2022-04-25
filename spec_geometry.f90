@@ -157,15 +157,28 @@ CONTAINS
          cache%gij(1,3) = cache%gij(3,1)
          cache%gij(2,3) = cache%gij(3,2)
 
+         !Mirror about the axis
          cache%dgij(1,2,1) = cache%dgij(2,1,1)
+         cache%dgij(2,3,1) = cache%dgij(3,2,1)
+         cache%dgij(1,3,1) = cache%dgij(3,1,1)
+
          cache%dgij(1,2,2) = cache%dgij(2,1,2)
+         cache%dgij(2,3,2) = cache%dgij(3,2,2)
+         cache%dgij(1,3,2) = cache%dgij(3,1,2)
+         
          cache%dgij(1,2,3) = cache%dgij(2,1,3)
+         cache%dgij(2,3,3) = cache%dgij(3,2,3)
+         cache%dgij(1,3,3) = cache%dgij(3,1,3)
          
          s_save = s
          theta_save = theta
          xi_save = xi
       END IF
       get_spec_metric => cache
+
+   ! PRINT*,"metric derivatives s",cache%dgij(:,:,1)
+   ! PRINT*,"metric derivatives t",cache%dgij(:,:,2)
+   ! PRINT*,"metric derivatives z",cache%dgij(:,:,3)
 
    END FUNCTION get_spec_metric
 
@@ -180,15 +193,28 @@ CONTAINS
     REAL, DIMENSION(v%mn) :: alphai, cosai, sinai
     REAL, DIMENSION(v%mn) :: t1, t2, t3, t4, ddt1, ddt3, fj, dfj, ddfj
 
+    INTEGER :: ii
+
    alphai = v%im*theta - v%in*xi
    cosai = COS(alphai)
    sinai = SIN(alphai)
 
    IF (v%icoordinatesingularity .AND. lvol == 1) THEN
       ! See Z S Qu et al 2020 Plasma Phys. Control Fusion for the Zernike coordinate parameterisation
-
+      ! PRINT*,"s=",s
          sbar = (1. + s) / 2.
+      ! PRINT*,"s=",sbar
 
+      !!!!
+      ! fj(1:v%ntor+1) = sbar
+      ! dfj(1:v%ntor+1) = 0.5
+      ! ddfj(1:v%ntor+1) = 0.0
+
+      ! fj(v%ntor+2:v%mn) = sbar**(v%im(v%ntor+2:v%mn)/2.0)
+      ! dfj(v%ntor+2:v%mn) = 0.5 * (v%im(v%ntor+2:v%mn)/2.0) * fj(v%ntor+2:v%mn) / sbar
+      ! ddfj(v%ntor+2:v%mn) = 0.5 * (v%im(v%ntor+2:v%mn)/2.0 - 1.0) * dfj(v%ntor+2:v%mn) / sbar
+
+      !!!!
          fj(1)    = sbar
          dfj(1)   = 0.5
          ddfj(1)  = 0.
@@ -203,6 +229,7 @@ CONTAINS
          fj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*sbar**2
          ddfj(v%mpol+2:v%mn) = ddfj(v%mpol+2:v%mn)*v%im(v%mpol+2:v%mn)*(v%im(v%mpol+2:v%mn) - 2.)/16.
       END IF
+
 
       t1(:) = v%Rbc(:,0) + (v%Rbc(:,1) - v%Rbc(:,0))*fj(:)
       t2(:) = (v%Rbc(:,1) - v%Rbc(:,0))*dfj(:)

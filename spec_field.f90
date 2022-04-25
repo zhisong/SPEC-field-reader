@@ -61,7 +61,7 @@ contains
 
 
     IF (af%isingular) THEN
-      sbar = (s + 1.0)/2.0
+      sbar = MAX((s + 1.0)/2.0, 0.0)
       CALL get_zernike(sbar,lrad,mpol,zernike)
     ELSE
       CALL get_cheby(s,lrad,cheby)
@@ -153,95 +153,6 @@ contains
 
       END DO
 
-    !   IF (.NOT.af%isingular) THEN ! If lvol>1 (using Cheby)
-
-    !     ! to speed up calculations, first we calculate some quantities that can be reused
-    !     sumTbarAte = SUM(cheby(:,0) * af%Ate(:,ii))
-    !     sumTbarAze = SUM(cheby(:,0) * af%Aze(:,ii))
-    !     sumdTbarAte = SUM(cheby(:,1) * af%Ate(:,ii))
-    !     sumdTbarAze = SUM(cheby(:,1) * af%Aze(:,ii))
-    !     sumddTbarAte = SUM(cheby(:,2) * af%Ate(:,ii))
-    !     sumddTbarAze = SUM(cheby(:,2) * af%Aze(:,ii))
-
-    !     IF (.NOT. af%isym) THEN
-    !       sumTbarAto = SUM(cheby(:,0) * af%Ato(:,ii))
-    !       sumTbarAzo = SUM(cheby(:,0) * af%Azo(:,ii))
-    !       sumdTbarAto = SUM(cheby(:,1) * af%Ato(:,ii))
-    !       sumdTbarAzo = SUM(cheby(:,1) * af%Azo(:,ii))
-    !       sumddTbarAto = SUM(cheby(:,2) * af%Ato(:,ii))
-    !       sumddTbarAzo = SUM(cheby(:,2) * af%Azo(:,ii))
-    !     END IF ! if not stellarator symmetric
-
-    !   ELSE ! If not in lvol==1 (using Zernike)
-
-    !     ! DO ll = 1, lrad
-    !       sumTbarAte  = SUM(af%Ate(:,ii) * zernike(:,Int(im),0))
-    !       sumdTbarAte = SUM(af%Ate(:,ii) * zernike(:,Int(im),1))
-    !       sumddTbarAte= SUM(af%Ate(:,ii) * zernike(:,Int(im),2))
-
-    !       sumTbarAze  = SUM(af%Aze(:,ii) * zernike(:,Int(im),0))
-    !       sumdTbarAze = SUM(af%Aze(:,ii) * zernike(:,Int(im),1))
-    !       sumddTbarAze= SUM(af%Aze(:,ii) * zernike(:,Int(im),2))
-
-    !       IF (.NOT.af%isym) THEN
-    !         sumTbarAto  = SUM(af%Ato(:,ii) * zernike(:,Int(im),0))
-    !         sumdTbarAto = SUM(af%Ato(:,ii) * zernike(:,Int(im),1))
-    !         sumddTbarAto= SUM(af%Ato(:,ii) * zernike(:,Int(im),2))
-
-    !         sumTbarAzo  = SUM(af%Azo(:,ii) * zernike(:,Int(im),0))
-    !         sumdTbarAzo = SUM(af%Azo(:,ii) * zernike(:,Int(im),1))
-    !         sumddTbarAzo= SUM(af%Azo(:,ii) * zernike(:,Int(im),2))
-    !       END IF
-    !     ! END DO
-        
-    !   END IF
-
-    !   ! now we calculate vector potential
-    !   a(2) = a(2) + sumTbarAte * cosai
-    !   a(3) = a(3) + sumTbarAze * cosai
-
-    !   if (.not. af%isym) then
-    !     a(2) = a(2) + sumTbarAto * sinai
-    !     a(3) = a(3) + sumTbarAzo * sinai
-    !   end if ! if not stellarator symmetric
-   
-    !   ! then we need to calculate the field
-    !   gb(1) = gb(1) - (im * sumTbarAze +  in * sumTbarAte) * sinai
-    !   gb(2) = gb(2) - sumdTbarAze * cosai
-    !   gb(3) = gb(3) + sumdTbarAte * cosai
-
-    !   if (.not. af%isym) then
-    !     gb(1) = gb(1) + (im * sumTbarAzo +  in * sumTbarAto) * cosai
-    !     gb(2) = gb(2) - sumdTbarAzo * sinai
-    !     gb(3) = gb(3) + sumdTbarAto * sinai
-    !   end if ! if not stellarator symmetric
-
-    !   ! the derivative of the field d(gB)/d(s,theta,xi), finally
-    !   dgb(1,1) = dgb(1,1) - (im * sumdTbarAze +  in * sumdTbarAte) * sinai
-    !   dgb(2,1) = dgb(2,1) - sumddTbarAze * cosai
-    !   dgb(3,1) = dgb(3,1) + sumddTbarAte * cosai
-      
-    !   dgb(1,2) = dgb(1,2) - im * (im * sumTbarAze +  in * sumTbarAte) * cosai
-    !   dgb(2,2) = dgb(2,2) + im * sumdTbarAze * sinai
-    !   dgb(3,2) = dgb(3,2) - im * sumdTbarAte * sinai 
-
-    !   dgb(1,3) = dgb(1,3) + in * (im * sumTbarAze +  in * sumTbarAte) * cosai
-    !   dgb(2,3) = dgb(2,3) - in * sumdTbarAze * sinai
-    !   dgb(3,3) = dgb(3,3) + in * sumdTbarAte * sinai
-
-    !   if (.not. af%isym) then
-    !     dgb(1,1) = dgb(1,1) + (im * sumdTbarAzo +  in * sumdTbarAto) * cosai
-    !     dgb(2,1) = dgb(2,1) - sumddTbarAzo * sinai
-    !     dgb(3,1) = dgb(3,1) + sumddTbarAto * sinai
-
-    !     dgb(1,2) = dgb(1,2) - im * (im * sumTbarAzo +  in * sumTbarAto) * sinai
-    !     dgb(2,2) = dgb(2,2) - im * sumdTbarAzo * cosai
-    !     dgb(3,2) = dgb(3,2) + im * sumdTbarAto * cosai
-
-    !     dgb(1,3) = dgb(1,3) + in * (im * sumTbarAzo +  in * sumTbarAto) * sinai
-    !     dgb(2,3) = dgb(2,3) + in * sumdTbarAzo * cosai
-    !     dgb(3,3) = dgb(3,3) - in * sumdTbarAto * cosai
-    !   end if
     end do
   end subroutine get_spec_field
 
