@@ -10,7 +10,7 @@ INCLUDE+=$(HDF5compile)
 LIB+=$(HDF5link)
 
 # the name of the executable
-TARGET=./spec_field_reader.exe
+TARGET=./spec_field_reader.x
 
 # the source files
 OBJS=poly.o spec_geometry.o spec_field.o spec_state.o spec_io.o main.o
