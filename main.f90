@@ -18,15 +18,17 @@ PROGRAM test_specio
     REAL, DIMENSION(3) :: B, H
     REAL, DIMENSION(3,3) :: dB
 
-    REAL :: modB
+    REAL :: modB, modH
 
-    OPEN(1,file='out.txt',status='scratch')
-    WRITE(1,*) x(1), x(2), x(3), lvol
-    CLOSE(1)
+    ! OPEN(1,file='out.txt',status='scratch')
+    ! WRITE(1,*) x(1), x(2), x(3), lvol
+    ! CLOSE(1)
 
 
-    PRINT*,"Input s, theta, zeta, lvol:"
-    READ*, x(1), x(2) , x(3), lvol
+    ! PRINT*,"Input s, theta, zeta, lvol:"
+    ! READ*, x(1), x(2) , x(3), lvol
+    x = (/0.3,0.4,0.5/)
+    lvol = 1
 
 
     CALL read_spec_h5(filename,s_spec)
@@ -37,11 +39,37 @@ PROGRAM test_specio
     ! Get the magnetic field and vector potential
     CALL get_spec_field(s_spec%A(lvol), x(1), x(2), x(3), s_spec%Mpol, A, B, dB)
 
-    ! H = MATMUL(met%gij,B)/met%jac
-    ! modB = SQRT(DOT_PRODUCT(B,H)/met%jac)
-    modB = SQRT(DOT_PRODUCT(B,B))
-    
+    H = B/met%jac
+    modB = SQRT(DOT_PRODUCT(B,B)/met%jac)
+    modH = SQRT(DOT_PRODUCT(H,H)/met%jac)
 
+    
+    PRINT*,"R, Z : ",met%Rij(0,0),met%Zij(0,0)
+    PRINT*,"jacobian: ",met%jac
+    PRINT*,"metric: ",met%gij(1,:)
+    PRINT*,met%gij(2,:)
+    PRINT*,met%gij(3,:)
+
+    PRINT*,"jac der: ",met%grad_jac
+
+    PRINT*,"dgij (s): ",met%dgij(1,:,1)
+    PRINT*,met%dgij(2,:,1)
+    PRINT*,met%dgij(3,:,1)
+
+    PRINT*,"dgij (t): ",met%dgij(1,:,2)
+    PRINT*,met%dgij(2,:,2)
+    PRINT*,met%dgij(3,:,2)
+
+    PRINT*,"dgij (z): ",met%dgij(1,:,3)
+    PRINT*,met%dgij(2,:,3)
+    PRINT*,met%dgij(3,:,3)
+
+    PRINT*,"modB: ",modB
+    PRINT*,"modH: ",modH
+    PRINT*,"B: ",B
+    PRINT*,"H: ",H
+    PRINT*,"dB: ",dB
+    PRINT*,"A: ",A
 
 
 

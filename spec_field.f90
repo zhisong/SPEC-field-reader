@@ -118,8 +118,8 @@ contains
         dgb(3,1) = dgb(3,1) + af%Ate(ll,ii) * TT(2) * cosai
         ! Derivatives (dtheta)
         dgb(1,2) = dgb(1,2) - im * (im*af%Aze(ll,ii) + in*af%Ate(ll,ii)) * TT(0) * cosai
-        dgb(2,2) = dgb(2,2) + im * im*af%Aze(ll,ii) * TT(1) * sinai
-        dgb(3,2) = dgb(3,2) - im * in*af%Ate(ll,ii) * TT(1) * sinai
+        dgb(2,2) = dgb(2,2) + im * af%Aze(ll,ii) * TT(1) * sinai
+        dgb(3,2) = dgb(3,2) - im * af%Ate(ll,ii) * TT(1) * sinai
         ! Derivatives (dzeta)
         dgb(1,3) = dgb(1,3) + in * (im*af%Aze(ll,ii) + in*af%Ate(ll,ii)) * TT(0) * cosai
         ! dgb(1,3) = dgb(1,3) - in * af%Aze(ll,ii)  * TT(1) * sinai
